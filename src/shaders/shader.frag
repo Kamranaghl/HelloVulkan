@@ -1,9 +1,11 @@
 #version 450
 
-layout(location = 0) in vec3 fragColor;
+layout(location = 0) out vec4 out_color;
 
-layout(location = 0) out vec4 outColor;
+layout(push_constant) uniform PushConstant {
+    vec2 window_size;
+} push_constant;
 
 void main() {
-    outColor = vec4(fragColor, 1.0);
+   out_color = vec4(gl_FragCoord.xy / push_constant.window_size, 0.0, 1.0);
 }

@@ -11,6 +11,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+
 #include "HelloVulkan_config.h"
 
 #ifdef NDEBUG
@@ -40,6 +42,11 @@ void proxy_vkDestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMess
 class HelloTriangleApplication
 {
 public:
+    struct PushConstant
+    {
+        glm::vec2 window_size;
+    };
+
     void run()
     {
         init_window();
@@ -690,13 +697,17 @@ private:
         color_blending_create_info.blendConstants[2] = 0.0f;
         color_blending_create_info.blendConstants[3] = 0.0f;
 
+        VkPushConstantRange push_constant_range{};
+        push_constant_range.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        push_constant_range.offset = 0;
+        push_constant_range.size = sizeof(PushConstant);
+
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 0;
         pipelineLayoutInfo.pSetLayouts = nullptr;
-        pipelineLayoutInfo.pushConstantRangeCount = 0;
-        pipelineLayoutInfo.pPushConstantRanges = nullptr;
-
+        pipelineLayoutInfo.pushConstantRangeCount = 1;
+        pipelineLayoutInfo.pPushConstantRanges = &push_constant_range;
         if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipeline_layout) != VK_SUCCESS)
             throw std::runtime_error("VULKAN_CREATE_PIPELINE_LAYOUT_FAILURE");
 
@@ -810,7 +821,14 @@ private:
 
             vkCmdBeginRenderPass(m_command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
             vkCmdBindPipeline(m_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
-            vkCmdDraw(m_command_buffers[i], 3, 1, 0, 0);
+
+            PushConstant push_constant{
+                .window_size{WINDOW_WIDTH, WINDOW_HEIGHT},
+            };
+
+            vkCmdPushConstants(m_command_buffers[i], m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push_constant);
+
+            vkCmdDraw(m_command_buffers[i], 6, 1, 0, 0);
             vkCmdEndRenderPass(m_command_buffers[i]);
 
             if (vkEndCommandBuffer(m_command_buffers[i]) != VK_SUCCESS)
